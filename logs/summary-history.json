@@ -1,0 +1,92 @@
+[
+  {
+    "timestamp": "2026-03-27T11:20:05.667Z",
+    "status": "error",
+    "summary": null,
+    "error": "401 You do not have access to the organization tied to the API key."
+  },
+  {
+    "timestamp": "2026-03-27T11:25:02.196Z",
+    "status": "error",
+    "summary": null,
+    "error": "401 You do not have access to the organization tied to the API key."
+  },
+  {
+    "timestamp": "2026-03-27T11:28:31.721Z",
+    "status": "error",
+    "summary": null,
+    "error": "401 You do not have access to the organization tied to the API key."
+  },
+  {
+    "timestamp": "2026-03-27T11:29:03.300Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:29:03.883Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:30:46.699Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:32:13.830Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:34:02.138Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:37:44.491Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:39:36.644Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:47:31.991Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:47:43.174Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T11:51:16.122Z",
+    "status": "error",
+    "summary": null,
+    "error": "Failed after 3 attempts. Last error: Cannot connect to API: Client network socket disconnected before secure TLS connection was established"
+  },
+  {
+    "timestamp": "2026-03-27T12:08:12.832Z",
+    "status": "success",
+    "summary": "🤖 *Daily Briefing — Friday, 27 March 2026*\n\n### 📩 EMAILS\n- No new emails.\n\n### 📰 NEWS\n\n#### 🎮 Tech\n- **Pokémon Champions**: Plans to maintain long-term stadium operations. (Source: Nintendo Life)\n- **AdeptiCon 2026**: New Kill Team expansion featuring \"The Red Terror\" announced. (Source: Warhammer Community)\n- **GitHub Update**: Plans to utilize user data for training purposes confirmed. (Source: The Register)\n- **PlayStation Store**: Spring Sale offers significant promotions. (Source: MP1st)\n- **tvOS 26.4**: New features added to Apple TV. (Source: MacRumors)\n\n#### 🌍 General\n- **Market Update**: Stock futures decline amid U.S.-Iran war developments. (Source: CNBC)\n- **Pentagon**: Prepares for a decisive phase in the Iran conflict. (Source: Axios)\n- **Political Alert**: Democrats caution against ignoring colleague misconduct. (Source: Politico)\n- **Turkish Oil Incident**: Oil tanker struck by drones in the Black Sea near Istanbul. (Source: Bloomberg)",
+    "error": null
+  },
+  {
+    "timestamp": "2026-03-27T12:09:32.242Z",
+    "status": "success",
+    "summary": "### 📩 EMAILS\n- No new emails.\n\n---\n\n### 📰 NEWS\n\n#### 🎮 Tech\n- **Pokémon Champions**: Plans to maintain stadium operations long-term. (Source: Nintendo Life)\n- **AdeptiCon 2026**: New Kill Team expansion featuring The Red Terror vs. elite Cadians. (Source: Warhammer Community)\n- **GitHub**: Announcement about training on user data. (Source: The Register)\n- **PlayStation Store**: Spring sale offers top promotions of the year. (Source: MP1st)\n- **tvOS 26.4**: New features added to Apple TV. (Source: MacRumors)\n\n#### 🌍 General\n- **Stock Market**: Futures decline as U.S.-Iran war developments unfold. (Source: CNBC)\n- **Pentagon**: Preparing for a significant escalation in the Iran conflict. (Source: Axios)\n- **Political Integrity**: Democrats caution against ignoring misconduct among colleagues. (Source: Politico)\n- **Turkish Oil Tanker**: Attacked by drones in the Black Sea near Istanbul. (Source: Bloomberg)",
+    "error": null
+  }
+]

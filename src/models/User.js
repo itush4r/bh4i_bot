@@ -1,5 +1,18 @@
 import mongoose from 'mongoose';
 
+const PersonaSchema = new mongoose.Schema({
+  id:              { type: String, required: true },
+  displayName:     { type: String, required: true },
+  role:            { type: String, required: true },
+  expertise:       { type: [String], default: [] },
+  experienceYears: { type: Number, default: null },
+  industry:        { type: String, default: null },
+  tone:            { type: String, default: null },
+  responseStyle:   { type: String, default: null },
+  isBuiltIn:       { type: Boolean, default: false },
+  createdAt:       { type: Date, default: Date.now },
+}, { _id: false });
+
 const EmailAccountSchema = new mongoose.Schema({
   provider:          { type: String, enum: ["gmail", "outlook", "yahoo", "icloud", "other"] },
   emailAddress:      { type: String, required: true },
@@ -50,12 +63,21 @@ const UserSchema = new mongoose.Schema({
   // Multi-account email
   emailAccounts: [EmailAccountSchema],
 
+  // Personas (custom user-defined; built-ins live in lib/builtInPersonas.js)
+  personas:        { type: [PersonaSchema], default: [] },
+  activePersonaId: { type: String, default: null },
+
   // Temp fields for in-progress IMAP setup (cleared on success or cancel)
   emailSetupStep:    { type: Number,  default: 0 },
   emailSetupPending: { type: Boolean, default: false },
   emailProviderTemp: { type: String,  default: null },
   emailAddressTemp:  { type: String,  default: null },
   imapHostTemp:      { type: String,  default: null },
+
+  // Temp fields for in-progress persona creation (cleared on success or cancel)
+  personaSetupPending: { type: Boolean, default: false },
+  personaSetupStep:    { type: Number,  default: 0 },
+  personaSetupDraft:   { type: mongoose.Schema.Types.Mixed, default: null },
 
   // Daily briefing preferences (sent at 9:00 AM IST)
   briefing: {

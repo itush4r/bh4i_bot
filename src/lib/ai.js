@@ -277,21 +277,42 @@ async function analyseFile(extractedText, fileName, fileType, user) {
 
 /**
  * Rewrite a section of a file based on a user instruction.
+ *
+ * @param {string} extractedText
+ * @param {string} section
+ * @param {string} instruction
+ * @param {string} fileName
+ * @param {Object} [user]
+ * @param {Object} [opts]
+ * @param {"plain"|"latex"} [opts.format] Output format. "latex" emits a
+ *        valid LaTeX body suitable for downstream PDF compilation.
  */
-async function rewriteFileSection(extractedText, section, instruction, fileName, user) {
+async function rewriteFileSection(extractedText, section, instruction, fileName, user, opts = {}) {
+  const format = opts.format === "latex" ? "latex" : "plain";
+
+  const formatRules = format === "latex"
+    ? `- Output a valid LaTeX body (NO \\documentclass, NO \\begin{document}/\\end{document})\n` +
+      `- Escape these characters in prose: \\& \\% \\$ \\# \\_ \\{ \\} \\~ \\^\n` +
+      `- Use \\section{...} / \\subsection{...} for headings, itemize/enumerate for lists\n` +
+      `- Wrap inline math in $...$ and display math in \\[ ... \\] or equation environments\n` +
+      `- Use proper LaTeX quotes (\`\`like this'') and dashes (--, ---)\n` +
+      `- Output ONLY the LaTeX source, no fences, no commentary`
+    : `- Match the tone and style of the rest of the document\n` +
+      `- Be specific and professional\n` +
+      `- Output ONLY the rewritten section, no preamble`;
+
   try {
     const { text } = await generateTextWithFallback({
       prompt:
         `You are helping ${user?.name || "a user"} improve their file: "${fileName}".\n\n` +
         `Full file content:\n${extractedText.slice(0, 15000)}\n\n` +
         `Task: ${instruction}\n` +
-        `Section to focus on: ${section || "the entire document"}\n\n` +
+        `Section to focus on: ${section || "the entire document"}\n` +
+        `Output format: ${format}\n\n` +
         `RULES:\n` +
         `- Rewrite only the requested section\n` +
-        `- Match the tone and style of the rest of the document\n` +
-        `- Be specific and professional\n` +
-        `- Output ONLY the rewritten section, no preamble`,
-      maxTokens: 800,
+        `${formatRules}`,
+      maxTokens: format === "latex" ? 1400 : 800,
       temperature: 0.5,
     });
     return text;

@@ -24,6 +24,11 @@ export async function sendEscapeMessage(chatId, context) {
       "Your account and all data are safe. 🔒\n\n" +
       "_Example:_ `/help` to see what you can do.",
 
+    personaSetup:
+      "✅ Persona creation cancelled.\n\n" +
+      "Nothing was saved.\n\n" +
+      "_Example:_ `/personas` to see available personas.",
+
     default:
       "✅ Cancelled.\n\n" +
       "_Example:_ Type `/help` to see all commands.",

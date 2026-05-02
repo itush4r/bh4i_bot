@@ -4,6 +4,9 @@ import { generateSummary, generateChatResponse, analyzeEmails } from "../../../.
 import { sendTelegramMessage, sendTelegramFile } from "../../../../lib/telegram";
 import { fetchEmails, sendEmail } from "../../../../lib/emailClient";
 import { handleEmailSetup } from "../../../../lib/emailSetup";
+import { handlePersonaSetup, startPersonaSetup } from "../../../../lib/personaSetup";
+import { BUILT_IN_PERSONAS, getBuiltInPersona, isBuiltInId } from "../../../../lib/builtInPersonas";
+import { getActivePersona } from "../../../../lib/persona";
 import { checkQuota, deductQuota } from "../../../../lib/quota";
 import { handleAdminCommand } from "../../../../lib/adminCommands";
 import { checkRateLimit } from "../../../../lib/rateLimit";
@@ -241,6 +244,17 @@ export async function POST(req) {
         await sendEscapeMessage(chatId, "emailSetup");
         return NextResponse.json({ ok: true });
       }
+      if (user.personaSetupPending) {
+        await User.updateOne({ chatId: String(chatId) }, {
+          $set: {
+            personaSetupPending: false,
+            personaSetupStep:    0,
+            personaSetupDraft:   null,
+          },
+        });
+        await sendEscapeMessage(chatId, "personaSetup");
+        return NextResponse.json({ ok: true });
+      }
       // Not in any active flow — fall through to chat / commands
     }
 
@@ -386,6 +400,16 @@ export async function POST(req) {
         "`/setprofile name | Alice` — Update name\n" +
         "`/setprofile profession | Designer` — Update profession\n" +
         "`/setprofile city | Mumbai` — Update city\n\n" +
+
+        "🎭 *Personas*\n" +
+        "`/personas` — List built-in + your custom personas\n" +
+        "`/persona use ceo` — Switch to a persona\n" +
+        "`/persona clear` — Back to default behavior\n" +
+        "`/persona create my-coach | Sales Coach | VP Sales` — Guided creation\n" +
+        "`/persona clone ceo my-ceo` — Clone a built-in to edit\n" +
+        "`/persona show <id>` — View persona config\n" +
+        "`/persona edit <id> tone | <value>` — Update one field\n" +
+        "`/persona delete <id>` — Remove a custom persona\n\n" +
 
         "📰 *News* _(3 tokens)_\n" +
         "`/news` — Fetch & summarise today's top headlines\n\n" +
@@ -547,13 +571,18 @@ export async function POST(req) {
 
     // ─── COMMAND: /profile ─────────────────────────────────────────
     if (text === "/profile") {
+      const activePersona = getActivePersona(user);
+      const personaLine = activePersona
+        ? `\nActive persona: *${activePersona.displayName}* (\`${activePersona.id}\`)`
+        : "";
       await sendTelegramMessage(
         `👤 *Your Profile*\n\n` +
         `Name: ${user.name}\n` +
         `Profession: ${user.profession}\n` +
         `City: ${user.city}\n` +
         `Interests: ${user.interests}\n` +
-        `Response Style: ${user.responseStyle}`,
+        `Response Style: ${user.responseStyle}` +
+        personaLine,
         chatId
       );
       return NextResponse.json({ ok: true });
@@ -788,6 +817,345 @@ export async function POST(req) {
           chatId
         );
       }
+      return NextResponse.json({ ok: true });
+    }
+
+    // ─── COMMAND: /personas ────────────────────────────────────────
+    if (text === "/personas") {
+      const activeId = user.activePersonaId;
+      const customs  = user.personas || [];
+
+      const formatLine = (p, kind) => {
+        const active = p.id === activeId ? " ✅" : "";
+        return `• *${p.displayName}* — \`${p.id}\`${active} _(${kind})_`;
+      };
+
+      const lines = [];
+      lines.push("🎭 *Personas*\n");
+      lines.push("*Built-in:*");
+      BUILT_IN_PERSONAS.forEach((p) => lines.push(formatLine(p, "built-in")));
+      lines.push("");
+      lines.push("*Your custom personas:*");
+      if (customs.length === 0) {
+        lines.push("_(none yet)_");
+      } else {
+        customs.forEach((p) => lines.push(formatLine(p, "custom")));
+      }
+      lines.push("");
+      lines.push("*Commands:*");
+      lines.push("`/persona use <id>` — activate a persona");
+      lines.push("`/persona clear` — back to default behavior");
+      lines.push("`/persona show <id>` — view full config");
+      lines.push("`/persona create <id> | <name> | <role>` — guided creation");
+      lines.push("`/persona clone <built-in-id> <new-id>` — copy built-in to edit");
+      lines.push("`/persona edit <id> <field> | <value>` — update one field");
+      lines.push("`/persona delete <id>` — remove a custom persona");
+
+      await sendTelegramMessage(lines.join("\n"), chatId);
+      return NextResponse.json({ ok: true });
+    }
+
+    // ─── COMMAND: /persona ... ─────────────────────────────────────
+    if (text.startsWith("/persona ") || text === "/persona") {
+      const arg = text.replace("/persona", "").trim();
+
+      if (!arg) {
+        await sendTelegramMessage(
+          "❌ Usage: `/persona <subcommand>`\n\n" +
+          "Subcommands: `use`, `clear`, `show`, `create`, `clone`, `edit`, `delete`\n\n" +
+          "Run `/personas` to see available personas.",
+          chatId
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const SLUG_RE = /^[a-z0-9-]{2,30}$/;
+      const findPersona = (id) => getBuiltInPersona(id) || (user.personas || []).find((p) => p.id === id);
+      const findCustomIndex = (id) => (user.personas || []).findIndex((p) => p.id === id);
+
+      // /persona use <id>
+      if (arg.startsWith("use ") || arg === "use") {
+        const id = arg.replace("use", "").trim();
+        if (!id) {
+          await sendTelegramMessage("❌ Usage: `/persona use <id>` — see `/personas` for ids.", chatId);
+          return NextResponse.json({ ok: true });
+        }
+        const persona = findPersona(id);
+        if (!persona) {
+          await sendTelegramMessage(`❌ No persona with id \`${id}\`. Run \`/personas\` to see options.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+        await User.updateOne({ chatId: String(chatId) }, { $set: { activePersonaId: id } });
+        await sendTelegramMessage(
+          `✅ Persona switched to *${persona.displayName}*.\n\n` +
+          `Try chatting now to feel the change. To revert: \`/persona clear\``,
+          chatId
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // /persona clear
+      if (arg === "clear") {
+        await User.updateOne({ chatId: String(chatId) }, { $set: { activePersonaId: null } });
+        await sendTelegramMessage(
+          "✅ Persona cleared. The bot will use your default profile-based responses.\n\n" +
+          "_Example:_ `/personas` to switch back anytime.",
+          chatId
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // /persona show <id>
+      if (arg.startsWith("show ") || arg === "show") {
+        const id = arg.replace("show", "").trim();
+        if (!id) {
+          await sendTelegramMessage("❌ Usage: `/persona show <id>`", chatId);
+          return NextResponse.json({ ok: true });
+        }
+        const persona = findPersona(id);
+        if (!persona) {
+          await sendTelegramMessage(`❌ No persona with id \`${id}\`.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+        const fmt = (label, val) => val ? `${label}: ${Array.isArray(val) ? val.join(", ") : val}\n` : "";
+        await sendTelegramMessage(
+          `🎭 *${persona.displayName}* (\`${persona.id}\`)\n\n` +
+          fmt("Role", persona.role) +
+          fmt("Expertise", persona.expertise) +
+          fmt("Experience", persona.experienceYears ? `${persona.experienceYears} years` : null) +
+          fmt("Industry", persona.industry) +
+          fmt("Tone", persona.tone) +
+          fmt("Response style", persona.responseStyle) +
+          `Type: ${persona.isBuiltIn ? "built-in (read-only)" : "custom"}`,
+          chatId
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // /persona create <id> | <displayName> | <role>
+      if (arg.startsWith("create ") || arg === "create") {
+        const rest = arg.replace("create", "").trim();
+        const parts = rest.split("|").map((s) => s.trim());
+        if (parts.length < 3 || parts.some((p) => !p)) {
+          await sendTelegramMessage(
+            "❌ Format: `/persona create <id> | <displayName> | <role>`\n\n" +
+            "_Example:_ `/persona create my-coach | Sales Coach | VP Sales`",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        const [id, displayName, role] = parts;
+        if (!SLUG_RE.test(id)) {
+          await sendTelegramMessage(
+            "❌ Invalid id. Use 2-30 chars, lowercase letters/numbers/hyphens only.\n\n" +
+            "_Example:_ `my-coach`, `sales-vp`, `ceo2`",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        if (isBuiltInId(id)) {
+          await sendTelegramMessage(`❌ \`${id}\` collides with a built-in persona id. Pick another.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if (displayName.length > 50) {
+          await sendTelegramMessage("❌ displayName must be ≤50 chars.", chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if (role.length > 100) {
+          await sendTelegramMessage("❌ role must be ≤100 chars.", chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if ((user.personas || []).some((p) => p.id === id)) {
+          await sendTelegramMessage(`❌ A persona with id \`${id}\` already exists.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if ((user.personas || []).length >= 10) {
+          await sendTelegramMessage(
+            "❌ You've hit the *10 custom persona* cap. Delete one with `/persona delete <id>` first.",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await startPersonaSetup(user, chatId, { id, displayName, role });
+        return NextResponse.json({ ok: true });
+      }
+
+      // /persona clone <built-in-id> <new-id>
+      if (arg.startsWith("clone ") || arg === "clone") {
+        const rest = arg.replace("clone", "").trim();
+        const tokens = rest.split(/\s+/).filter(Boolean);
+        if (tokens.length !== 2) {
+          await sendTelegramMessage(
+            "❌ Format: `/persona clone <built-in-id> <new-id>`\n\n" +
+            "_Example:_ `/persona clone ceo my-ceo`",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        const [srcId, newId] = tokens;
+        const src = getBuiltInPersona(srcId);
+        if (!src) {
+          await sendTelegramMessage(`❌ \`${srcId}\` is not a built-in persona. Run \`/personas\`.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if (!SLUG_RE.test(newId)) {
+          await sendTelegramMessage(
+            "❌ Invalid new id. Use 2-30 chars, lowercase letters/numbers/hyphens only.",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        if (isBuiltInId(newId) || (user.personas || []).some((p) => p.id === newId)) {
+          await sendTelegramMessage(`❌ Id \`${newId}\` already exists.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if ((user.personas || []).length >= 10) {
+          await sendTelegramMessage(
+            "❌ You've hit the *10 custom persona* cap. Delete one with `/persona delete <id>` first.",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        const cloned = {
+          id: newId,
+          displayName: src.displayName,
+          role: src.role,
+          expertise: [...(src.expertise || [])],
+          experienceYears: src.experienceYears ?? null,
+          industry: src.industry || null,
+          tone: src.tone || null,
+          responseStyle: src.responseStyle || null,
+          isBuiltIn: false,
+          createdAt: new Date(),
+        };
+        await User.updateOne({ chatId: String(chatId) }, { $push: { personas: cloned } });
+        await sendTelegramMessage(
+          `✅ Cloned built-in *${src.displayName}* to your personas as \`${newId}\`.\n\n` +
+          `To activate: \`/persona use ${newId}\`\n` +
+          `To customise: \`/persona edit ${newId} tone | <new tone>\``,
+          chatId
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // /persona edit <id> <field> | <value>
+      if (arg.startsWith("edit ") || arg === "edit") {
+        const rest = arg.replace("edit", "").trim();
+        // Split: "<id> <field> | <value>"
+        const pipeIdx = rest.indexOf("|");
+        if (pipeIdx === -1) {
+          await sendTelegramMessage(
+            "❌ Format: `/persona edit <id> <field> | <value>`\n\n" +
+            "Fields: `displayName`, `role`, `expertise`, `experienceYears`, `industry`, `tone`, `responseStyle`\n\n" +
+            "_Example:_ `/persona edit my-coach tone | warm and encouraging`",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        const left  = rest.slice(0, pipeIdx).trim();
+        const value = rest.slice(pipeIdx + 1).trim();
+        const tokens = left.split(/\s+/);
+        if (tokens.length !== 2) {
+          await sendTelegramMessage("❌ Format: `/persona edit <id> <field> | <value>`", chatId);
+          return NextResponse.json({ ok: true });
+        }
+        const [id, field] = tokens;
+
+        if (isBuiltInId(id)) {
+          await sendTelegramMessage(
+            `❌ Built-in personas can't be edited. Clone first:\n\n\`/persona clone ${id} my-${id}\``,
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+
+        const idx = findCustomIndex(id);
+        if (idx === -1) {
+          await sendTelegramMessage(`❌ No custom persona with id \`${id}\`.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+
+        const FIELD_RULES = {
+          displayName:     { max: 50 },
+          role:            { max: 100 },
+          tone:            { max: 200 },
+          responseStyle:   { max: 200 },
+          industry:        { max: 100 },
+          expertise:       { array: true, maxItems: 10, maxItemLen: 50 },
+          experienceYears: { number: true, min: 0, max: 80 },
+        };
+        const rule = FIELD_RULES[field];
+        if (!rule) {
+          await sendTelegramMessage(
+            "❌ Unknown field. Valid: `displayName`, `role`, `expertise`, `experienceYears`, `industry`, `tone`, `responseStyle`",
+            chatId
+          );
+          return NextResponse.json({ ok: true });
+        }
+
+        let newValue;
+        if (rule.array) {
+          const items = value.split(",").map((s) => s.trim()).filter(Boolean);
+          if (items.length > rule.maxItems) {
+            await sendTelegramMessage(`❌ Max ${rule.maxItems} items.`, chatId);
+            return NextResponse.json({ ok: true });
+          }
+          if (items.some((i) => i.length > rule.maxItemLen)) {
+            await sendTelegramMessage(`❌ Each item must be ≤${rule.maxItemLen} chars.`, chatId);
+            return NextResponse.json({ ok: true });
+          }
+          newValue = items;
+        } else if (rule.number) {
+          const n = parseInt(value, 10);
+          if (Number.isNaN(n) || n < rule.min || n > rule.max) {
+            await sendTelegramMessage(`❌ Must be a number between ${rule.min} and ${rule.max}.`, chatId);
+            return NextResponse.json({ ok: true });
+          }
+          newValue = n;
+        } else {
+          if (value.length > rule.max) {
+            await sendTelegramMessage(`❌ ${field} must be ≤${rule.max} chars.`, chatId);
+            return NextResponse.json({ ok: true });
+          }
+          newValue = value;
+        }
+
+        await User.updateOne(
+          { chatId: String(chatId) },
+          { $set: { [`personas.${idx}.${field}`]: newValue } }
+        );
+        await sendTelegramMessage(`✅ Updated *${id}*'s ${field}.`, chatId);
+        return NextResponse.json({ ok: true });
+      }
+
+      // /persona delete <id>
+      if (arg.startsWith("delete ") || arg === "delete") {
+        const id = arg.replace("delete", "").trim();
+        if (!id) {
+          await sendTelegramMessage("❌ Usage: `/persona delete <id>`", chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if (isBuiltInId(id)) {
+          await sendTelegramMessage("❌ Built-in personas can't be deleted.", chatId);
+          return NextResponse.json({ ok: true });
+        }
+        if (findCustomIndex(id) === -1) {
+          await sendTelegramMessage(`❌ No custom persona with id \`${id}\`.`, chatId);
+          return NextResponse.json({ ok: true });
+        }
+        const update = { $pull: { personas: { id } } };
+        if (user.activePersonaId === id) update.$set = { activePersonaId: null };
+        await User.updateOne({ chatId: String(chatId) }, update);
+        await sendTelegramMessage(`✅ Deleted persona \`${id}\`.`, chatId);
+        return NextResponse.json({ ok: true });
+      }
+
+      await sendTelegramMessage(
+        "❌ Unknown subcommand.\n\n" +
+        "Valid: `use`, `clear`, `show`, `create`, `clone`, `edit`, `delete`\n\n" +
+        "Run `/personas` to see available personas.",
+        chatId
+      );
       return NextResponse.json({ ok: true });
     }
 
@@ -1516,7 +1884,7 @@ export async function POST(req) {
 
       try {
         const originalBuffer = await withTimeout(getFileGridFS(file.gridfsId), 10000);
-        const updatedBuffer  = await generateUpdatedFile(
+        const { buffer: updatedBuffer, format } = await generateUpdatedFile(
           originalBuffer,
           file.extractedText || "",
           file.name,
@@ -1524,6 +1892,12 @@ export async function POST(req) {
         );
         clearInterval(keepTypingDl);
         await sendTelegramFile(updatedBuffer, file.name, chatId);
+        const formatLabel = {
+          latex: "📄 Generated as LaTeX PDF (math/structured formatting detected).",
+          pdf:   "📄 Generated as standard PDF.",
+          docx:  "📄 Generated as DOCX.",
+        }[format];
+        if (formatLabel) await sendTelegramMessage(formatLabel, chatId);
         await deductQuota(user, "download");
         if (dlQuota.warning) await sendTelegramMessage(dlQuota.warning, chatId);
       } catch (err) {
@@ -1542,6 +1916,12 @@ export async function POST(req) {
     // ─── EMAIL SETUP STATE MACHINE ─────────────────────────────────
     if (user.emailSetupPending) {
       await handleEmailSetup(user, text, chatId);
+      return NextResponse.json({ ok: true });
+    }
+
+    // ─── PERSONA SETUP STATE MACHINE ───────────────────────────────
+    if (user.personaSetupPending) {
+      await handlePersonaSetup(user, text, chatId);
       return NextResponse.json({ ok: true });
     }
 

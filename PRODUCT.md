@@ -25,6 +25,9 @@ You send it a message. It responds like a personal assistant who knows your name
 ### 🤖 Personalised AI Chat
 Every response is shaped by your profile — name, profession, city, interests, and preferred response style. The AI writes like a personal assistant who knows you, not a generic chatbot. Conversation history is stored in MongoDB so context persists across sessions.
 
+### 🎭 Switchable Personas
+Need a CEO's framing on a strategy question? An HR partner's read on a tricky people problem? A reflective listener instead of an advice-giver? Switch the bot's persona on the fly. Five built-ins ship out of the box (CEO Advisor, HR Partner, Technical Mentor, Writing Coach, Reflective Listener), and you can build your own — `/persona create my-coach | Sales Coach | VP Sales` walks you through it. Daily briefings stay neutral so news doesn't get rewritten "as a CEO."
+
 ### 📧 Multi-Account Email
 Connect Gmail, Outlook, Yahoo, iCloud, or any IMAP provider. Manage multiple accounts simultaneously. The AI categorises your inbox — jobs, finance, newsletters, promotions — and surfaces only what you care about. Read any email in full with `/readmail`. Send emails directly from Telegram.
 
@@ -165,6 +168,17 @@ The infrastructure is ready. Monetisation is a Stripe integration away.
 | `/setprofile field \| value` | Update any profile field |
 | `/reset` | Clear conversation history |
 | `/deleteaccount` | Permanently delete all your data |
+
+### Personas
+| Command | What it does |
+|---------|-------------|
+| `/personas` | List built-in + your custom personas |
+| `/persona use <id>` | Switch the bot to a persona |
+| `/persona clear` | Back to default profile-based behavior |
+| `/persona create <id> \| <name> \| <role>` | Guided creation of a custom persona |
+| `/persona clone <built-in-id> <new-id>` | Clone a built-in to edit |
+| `/persona edit <id> <field> \| <value>` | Update one field on a custom persona |
+| `/persona delete <id>` | Remove a custom persona |
 
 ### Email
 | Command | What it does |

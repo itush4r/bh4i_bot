@@ -1,6 +1,6 @@
 # AI Assistant — Telegram Bot
 
-A personal AI assistant delivered via Telegram. Connects to your email accounts (Gmail, Outlook, Yahoo, iCloud, or any IMAP provider), fetches the news you care about, controls your Android phone remotely, and sends a daily briefing — all personalised to your profile and preferences.
+A personal AI assistant delivered via Telegram. Connects to your email accounts (Gmail, Outlook, Yahoo, iCloud, or any IMAP provider), fetches the news you care about, controls your Android phone remotely, switches between AI personas on demand, and sends a daily briefing — all personalised to your profile and preferences.
 
 Built with Next.js (App Router), MongoDB, and Google Gemini.
 
@@ -10,6 +10,7 @@ Built with Next.js (App Router), MongoDB, and Google Gemini.
 
 - **Flexible onboarding** — name is required, then choose to set up all preferences one by one, skip all with defaults, or pick specific ones to configure
 - **Persistent AI chat with web search** — conversation history stored in MongoDB; Gemini automatically searches Google when it needs current info (weather, prices, live scores, recent events)
+- **Switchable personas** — five built-ins (CEO Advisor, HR Partner, Technical Mentor, Writing Coach, Reflective Listener) plus guided creation, cloning, and editing of your own custom personas; daily briefings stay neutral
 - **Multi-account email** — connect Gmail, Outlook, Yahoo, iCloud, or any IMAP provider; manage multiple accounts per user
 - **Smart email analysis** — AI categorises emails by focus areas you choose (jobs, finance, newsletters, promotions, etc.)
 - **Full email reading** — fetch emails and read full body content with `/readmail`
@@ -17,17 +18,17 @@ Built with Next.js (App Router), MongoDB, and Google Gemini.
 - **Configurable daily briefing** — choose what to receive (news, mails, both, or none) at 9:00 AM IST every day
 - **File upload and intelligence** — send any PDF, DOCX, TXT, CSV, XLSX, or image; bot reads it, gives instant AI feedback, and saves it for context-aware chat
 - **File context in chat** — mark files as active and the AI references them naturally in conversation
-- **Downloadable updated files** — ask the bot to rewrite a section, then `/download` the result as a proper PDF or DOCX
+- **Downloadable updated files** — ask the bot to rewrite a section, then `/download` the result as a proper PDF or DOCX; LaTeX-quality PDF rendering kicks in automatically when the content benefits from it (resumes, math, structured docs), with `pdf-lib` as a fallback
 - **Android phone control** — connect your phone via ADB bridge, then run natural language tasks ("Open WhatsApp and send hello to Mom") powered by Gemini Vision in a ReAct agent loop
 - **App permission system** — control which apps the bot can access on your phone
-- **Per-user preferences** — each user controls their own news, email, briefing, and phone settings independently
+- **Per-user preferences** — each user controls their own news, email, briefing, persona, and phone settings independently
 - **Per-user daily token quota** — protects Gemini free tier across all users with soft limits and warnings
 - **Quota request flow** — users can request more tokens; admin gets notified and can approve/deny via Telegram
 - **Admin Telegram commands** — manage users, quotas, bans, phone access, and warnings directly from Telegram
 - **Per-user rate limiting** — configurable requests/minute per user with request flow
 - **Web admin dashboard** — password-protected dashboard at `/admin` to view and manage all users
 - **Account deletion** — users can permanently delete all their data via `/deleteaccount`
-- **Universal cancel/escape** — type `cancel`, `stop`, `exit`, or `quit` at any point during onboarding, email setup, or account deletion to safely abort; every mid-flow prompt shows an escape hint
+- **Universal cancel/escape** — type `cancel`, `stop`, `exit`, or `quit` at any point during onboarding, email setup, persona creation, or account deletion to safely abort; every mid-flow prompt shows an escape hint
 - **Command typo correction** — mistyped commands like `/mail`, `/email`, `/prefs`, `/delete` get a "did you mean?" suggestion instead of being treated as chat
 - **AI always shows next action** — every explanation ends with the exact command to type next; casual messages get natural short replies without commands
 
@@ -46,9 +47,9 @@ Built with Next.js (App Router), MongoDB, and Google Gemini.
 | News | NewsAPI |
 | Bot | Telegram Bot API |
 | File — DOCX read | mammoth |
-| File — PDF read | pdf-parse |
-| File — Excel/CSV | xlsx |
-| File — PDF generate | pdf-lib |
+| File — PDF read | unpdf |
+| File — Excel/CSV | exceljs |
+| File — PDF generate | LaTeX (latexonline.cc) with pdf-lib fallback |
 | File — DOCX generate | docx |
 | File storage | MongoDB GridFS |
 | Phone Bridge | Express + ADB (runs on Android via Termux or PC) |
@@ -265,6 +266,20 @@ Then in Telegram:
 | `/usage` | Check your daily token usage and rate limit |
 | `/requestquota <reason>` | Request more daily tokens (admin gets notified) |
 | `/requestlimit <reason>` | Request higher rate limit (admin gets notified) |
+
+### Personas
+| Command | Description |
+|---------|-------------|
+| `/personas` | List built-in personas plus your custom ones |
+| `/persona use <id>` | Switch the bot to a persona (e.g. `ceo`, `hr`, `mentor`, `coach`, `listener`) |
+| `/persona clear` | Return to default profile-based behaviour |
+| `/persona create <id> \| <name> \| <role>` | Guided creation of a custom persona |
+| `/persona clone <built-in-id> <new-id>` | Clone a built-in persona to edit |
+| `/persona show <id>` | View a persona's full configuration |
+| `/persona edit <id> <field> \| <value>` | Update one field on a custom persona |
+| `/persona delete <id>` | Delete a custom persona |
+
+Built-in personas: `ceo` (CEO Advisor), `hr` (HR Partner), `mentor` (Technical Mentor), `coach` (Writing Coach), `listener` (Reflective Listener). Daily briefings ignore the active persona so news doesn't get rewritten in-character.
 
 ### News
 | Command | Description |

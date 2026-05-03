@@ -10,13 +10,11 @@ export async function extractTextFromFile(buffer, fileType) {
   switch (fileType) {
     case "pdf": {
       try {
-        const { PDFParse } = await import("pdf-parse");
-        const parser = new PDFParse({});
-        await parser.load(buffer);
-        const text = await parser.getText();
-        parser.destroy();
+        const { extractText } = await import("unpdf");
+        const { text } = await extractText(new Uint8Array(buffer), { mergePages: true });
         return text?.trim() || null;
-      } catch {
+      } catch (err) {
+        console.error("[fileExtractor] PDF extraction failed:", err?.message || err);
         return null;
       }
     }

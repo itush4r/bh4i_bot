@@ -21,6 +21,11 @@ const features = [
     desc: "Remembers your name, job, city, and preferences. Responds like an assistant who knows you — not a generic chatbot.",
   },
   {
+    icon: "🎭",
+    title: "Switchable Personas",
+    desc: "Swap voices on the fly — CEO Advisor, HR Partner, Technical Mentor, Writing Coach, Reflective Listener — or build your own custom persona.",
+  },
+  {
     icon: "📧",
     title: "Multi-Account Email",
     desc: "Connect Gmail, Outlook, Yahoo, iCloud, or any IMAP provider. AI categorises your inbox and surfaces what matters.",
@@ -48,14 +53,15 @@ const features = [
 ];
 
 const commands = [
-  ["/start",        "7-step personalised setup"],
-  ["/mails",        "AI-analyse your inbox (all providers)"],
-  ["/readmail 2",   "Read email #2 in full"],
-  ["/news",         "Your personalised news briefing"],
-  ["/phone <task>", "Control your Android phone in plain English"],
-  ["/send",         "Send an email directly from Telegram"],
-  ["/usage",        "Check your daily token usage"],
-  ["/preferences",  "Customise everything"],
+  ["/start",         "7-step personalised setup"],
+  ["/persona use ceo", "Switch the bot to a CEO Advisor voice"],
+  ["/mails",         "AI-analyse your inbox (all providers)"],
+  ["/readmail 2",    "Read email #2 in full"],
+  ["/news",          "Your personalised news briefing"],
+  ["/phone <task>",  "Control your Android phone in plain English"],
+  ["/send",          "Send an email directly from Telegram"],
+  ["/usage",         "Check your daily token usage"],
+  ["/preferences",   "Customise everything"],
 ];
 
 const steps = [
@@ -63,6 +69,37 @@ const steps = [
   { n: "2", title: "Set up your profile", desc: "Name is required. Everything else is optional — skip all and use defaults" },
   { n: "3", title: "Connect your email",  desc: "Gmail and Outlook use a one-click OAuth link. Yahoo and others use an app password" },
   { n: "4", title: "You're done",         desc: "Your assistant is live. Chat, fetch emails, get news, or control your phone" },
+];
+
+const faqs = [
+  {
+    q: "Is it really free?",
+    a: "Yes. The free tier covers 10 tokens per day — enough for a daily briefing, a few inbox checks, and chat. If you need more, /requestquota and the admin can raise your limit.",
+  },
+  {
+    q: "Are my email credentials safe?",
+    a: "OAuth tokens (Gmail, Outlook) and IMAP passwords (Yahoo, iCloud, others) are encrypted at rest with AES-256-GCM. Plaintext credentials never touch the database, and tokens are decrypted in memory only when making an API call.",
+  },
+  {
+    q: "What data does the bot actually see?",
+    a: "Only what you connect. Emails are fetched on demand and analysed in-context — they aren't stored long-term. Your conversation history is isolated to your Telegram chat ID and never shared with other users.",
+  },
+  {
+    q: "Will my emails be sent to OpenAI or other AI providers?",
+    a: "No. The bot uses Google Gemini exclusively for chat, summarisation, and phone control. No third-party AI providers are involved.",
+  },
+  {
+    q: "Can it really control my Android phone?",
+    a: "Yes. A lightweight bridge server runs on your phone (in Termux — no PC needed) or on a connected PC over ADB. Gemini Vision reads each screenshot and decides the next tap, type, or swipe in a ReAct loop, up to 20 steps per task.",
+  },
+  {
+    q: "Do I need to install an app?",
+    a: "No. The bot runs entirely inside Telegram. The only optional install is the bridge server on your phone, and only if you want phone control.",
+  },
+  {
+    q: "Can I delete everything?",
+    a: "Yes. /deleteaccount permanently wipes your profile, conversation history, saved files, and connected email credentials. There is no soft-delete or recovery.",
+  },
 ];
 
 export default function LandingPage() {
@@ -134,6 +171,20 @@ export default function LandingPage() {
         </p>
       </section>
 
+      {/* Hero demo banner */}
+      <section className="max-w-[960px] mx-auto px-6 pb-20">
+        <div className="relative aspect-video rounded-2xl border border-white/10 bg-gradient-to-br from-blue-600/10 via-violet-700/10 to-pink-500/10 overflow-hidden shadow-[0_24px_80px_rgba(96,165,250,0.15)] flex items-center justify-center">
+          {/* Replace this block with a <video> or <img> when the demo recording is ready */}
+          <div className="text-center px-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-2xl">
+              ▶
+            </div>
+            <p className="text-slate-300 text-sm font-semibold">Demo video coming soon</p>
+            <p className="text-slate-500 text-xs mt-1">Watch the bot fetch a briefing, read an email, and run a phone task</p>
+          </div>
+        </div>
+      </section>
+
       {/* Features grid */}
       <section className="max-w-[1060px] mx-auto px-6 pb-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {features.map((f) => (
@@ -202,6 +253,30 @@ export default function LandingPage() {
             >
               {p}
             </span>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-[760px] mx-auto px-6 pb-20">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight mb-3 text-center">
+          Common questions
+        </h2>
+        <p className="text-slate-500 text-center mb-10">
+          Everything people ask before connecting their email.
+        </p>
+        <div className="space-y-3">
+          {faqs.map((f) => (
+            <details
+              key={f.q}
+              className="group bg-white/[0.03] border border-white/[0.07] rounded-2xl px-6 py-5 open:bg-white/[0.05] transition-colors"
+            >
+              <summary className="flex items-center justify-between cursor-pointer list-none gap-4">
+                <span className="text-slate-100 text-sm sm:text-base font-semibold">{f.q}</span>
+                <span className="text-slate-500 text-xl leading-none transition-transform group-open:rotate-45 select-none">+</span>
+              </summary>
+              <p className="text-slate-400 text-sm leading-relaxed mt-3">{f.a}</p>
+            </details>
           ))}
         </div>
       </section>

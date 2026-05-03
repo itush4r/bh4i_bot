@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_BOT_USERNAME || "your_bot";
-const GITHUB_URL   = "https://github.com/itush4r/ai-assistant";
+const GITHUB_URL   = "https://github.com/itush4r/bh4i_bot";
 const TELEGRAM_URL = `https://t.me/${BOT_USERNAME}`;
 
 const features = [
